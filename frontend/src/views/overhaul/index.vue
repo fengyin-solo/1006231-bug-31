@@ -67,6 +67,38 @@
       <span>共 {{ total }} 条机组检修记录</span>
       <span v-if="errorMessage" class="error-text">{{ errorMessage }}</span>
     </footer>
+
+    <!-- 泄洪后续检修待办：与泄洪操作页读同一份，条数对应、实时同步，这里只做检修派工查看 -->
+    <section class="followup-panel">
+      <header class="followup-head">
+        <h3>泄洪后续检修待办</h3>
+        <span class="page-desc">共 {{ followups.length }} 条，泄洪结束自动回写，与泄洪操作页同步</span>
+      </header>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>来源操作编号</th><th>待办内容</th><th>泄洪闸号</th><th>开启孔数</th>
+            <th>泄洪流量</th><th>责任班组</th><th>操作人</th><th>结束时间</th><th>状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="todo in followups" :key="todo.sourceNo">
+            <td>{{ todo.sourceNo }}</td>
+            <td>{{ todo.title }}</td>
+            <td>{{ todo.gateNo }}</td>
+            <td>{{ todo.openedHoles }}</td>
+            <td>{{ todo.discharge }}</td>
+            <td>{{ todo.crew }}</td>
+            <td>{{ todo.operator }}</td>
+            <td>{{ todo.endedAt }}</td>
+            <td>{{ todo.status }}</td>
+          </tr>
+          <tr v-if="!followups.length">
+            <td colspan="9" class="empty-state">暂无泄洪后续检修待办</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
   </section>
 </template>
 
@@ -76,10 +108,11 @@ import { computed, onMounted, ref } from 'vue'
 import {
   downloadEntries,
   listEntries,
+  listFollowupTodos,
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
-import type { EntryRow } from '@/data/types'
+import type { EntryRow, FollowupTodo } from '@/data/types'
 
 const meta = moduleMeta('overhaul')
 const columns = ["工作票号", "检修机组", "检修级别", "计划工期", "实际工期", "工作负责人", "验收人员", "检修状态"]
@@ -90,6 +123,7 @@ const stats = [{"label": "待审批工作票", "value": 0}, {"label": "检修中
 const rows = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
+const followups = ref<FollowupTodo[]>([])
 const filters = ref<Record<string, string>>({})
 const filterFields = columns.slice(0, 3)
 const statusSummary = computed(() =>
@@ -128,6 +162,7 @@ function reload() {
     const payload = listEntries(meta.key, filters.value)
     rows.value = payload.items
     total.value = payload.total
+    followups.value = listFollowupTodos()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '机组检修列表读取失败'
   }
