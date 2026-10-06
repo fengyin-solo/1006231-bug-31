@@ -1,13 +1,14 @@
 <template>
-  <section class="page" data-module="gate">
+  <section class="page" data-module="todo">
     <header class="page-head">
       <div>
-        <h2>闸门启闭管理</h2>
-        <p class="page-desc">维护闸门，围绕闸门编号、闸门类型、孔口尺寸、当前开度做登记、筛选与状态流转。</p>
+        <h2>检修待办管理</h2>
+        <p class="page-desc">泄洪等操作的结论回写形成的后续检修待办清单，围绕待办编号、来源单号、结论做登记、跟进与销项。</p>
+        <p class="panel-hint">待办合计 {{ pendingTotal }} 条，与运营概览「检修待办」待处理数读同一份数据。</p>
       </div>
       <div class="page-actions">
-        <button class="btn primary" type="button" @click="openCreate">登记闸门</button>
-        <button class="btn" type="button" @click="exportRows">导出闸门启闭清单</button>
+        <button class="btn primary" type="button" @click="openCreate">登记检修待办</button>
+        <button class="btn" type="button" @click="exportRows">导出检修待办清单</button>
       </div>
     </header>
 
@@ -58,13 +59,13 @@
           </td>
         </tr>
         <tr v-if="!rows.length">
-          <td :colspan="columns.length + 2" class="empty-state">暂无闸门启闭数据，可先登记闸门</td>
+          <td :colspan="columns.length + 2" class="empty-state">暂无检修待办数据，泄洪结束后会自动回写结论</td>
         </tr>
       </tbody>
     </table>
 
     <footer class="page-foot">
-      <span>共 {{ total }} 条闸门启闭记录</span>
+      <span>共 {{ total }} 条检修待办记录</span>
       <span v-if="errorMessage" class="error-text">{{ errorMessage }}</span>
     </footer>
   </section>
@@ -81,11 +82,11 @@ import {
 } from '@/api/local-service'
 import type { EntryRow } from '@/data/types'
 
-const meta = moduleMeta('gate')
-const columns = ["闸门编号", "闸门类型", "孔口尺寸", "当前开度", "泄洪流量", "启闭机型号", "操作人员", "操作时间", "闸门状态"]
-const actions = ["开启闸门", "关闭闸门", "登记故障"]
-const statuses = ["待操作", "运行中", "已关闭", "故障"]
-const stats = [{"label": "开启闸门", "value": 0}, {"label": "关闭闸门", "value": 0}, {"label": "故障闸门", "value": 0}]
+const meta = moduleMeta('todo')
+const columns = ["待办编号", "来源单号", "待办内容", "结论", "责任班组", "登记日期", "待办状态"]
+const actions = ["开始处理", "完成待办"]
+const statuses = ["待处理", "处理中", "已完成"]
+const stats = [{"label": "待处理待办", "value": 0}, {"label": "处理中待办", "value": 0}, {"label": "已完成待办", "value": 0}]
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)
@@ -98,6 +99,8 @@ const statusSummary = computed(() =>
     count: rows.value.filter((row) => String(row.status) === status).length,
   })),
 )
+// 待办合计 = 未销项（pending）条数，运营概览的「待处理」列按同一口径统计。
+const pendingTotal = computed(() => rows.value.filter((row) => row.pending).length)
 
 function resetFilters() {
   filters.value = {}
@@ -109,7 +112,7 @@ function exportRows() {
 }
 
 function openCreate() {
-  errorMessage.value = '闸门登记入口尚未接入审批流'
+  errorMessage.value = '检修待办由泄洪结束等操作结论自动回写，暂不开放手工登记'
 }
 
 function runAction(action: string, row: EntryRow) {
@@ -129,7 +132,7 @@ function reload() {
     rows.value = payload.items
     total.value = payload.total
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '闸门启闭列表读取失败'
+    errorMessage.value = error instanceof Error ? error.message : '检修待办列表读取失败'
   }
 }
 

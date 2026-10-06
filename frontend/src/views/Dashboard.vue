@@ -28,6 +28,17 @@
         </tr>
       </tbody>
     </table>
+    <section class="panel">
+      <h3 class="panel-title">提醒事项（{{ reminders.total }}）</h3>
+      <p class="panel-hint">与检修待办清单读同一份数据，待办销项后提醒同步消失。</p>
+      <ul v-if="reminders.items.length" class="reminder-list">
+        <li v-for="item in reminders.items" :key="String(item.id)">
+          【{{ item['待办编号'] }}】{{ item['待办内容'] }} —— {{ item['责任班组'] }} ·
+          {{ item['登记日期'] }}
+        </li>
+      </ul>
+      <p v-else class="panel-hint">当前没有待跟进的检修待办。</p>
+    </section>
     <footer class="page-foot">
       <span>数据保存在本机浏览器里，换浏览器或清缓存会回到示例数据</span>
     </footer>
@@ -37,16 +48,18 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 
-import { loadOverview } from '@/api/local-service'
-import type { OverviewResult } from '@/data/types'
+import { listReminders, loadOverview } from '@/api/local-service'
+import type { EntryRow, OverviewResult } from '@/data/types'
 
 const cards = ref<OverviewResult['cards']>([])
 const moduleRows = ref<OverviewResult['modules']>([])
+const reminders = ref<{ total: number; items: EntryRow[] }>({ total: 0, items: [] })
 
 function refresh() {
   const payload = loadOverview()
   cards.value = payload.cards
   moduleRows.value = payload.modules
+  reminders.value = listReminders()
 }
 
 onMounted(refresh)
